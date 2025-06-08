@@ -1,6 +1,6 @@
-import * as vscode from 'vscode'
-const fs = require('fs')
-const PathModule = require('path')
+import fs from 'fs';
+import PathModule from 'path';
+import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
     // Register the commands that are provided to the user
@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     let disposableRenameCommand = vscode.commands.registerCommand('extension.renameBatch', (clicked_file, selected_files) => {
         if (!selected_files) return
-        
+
         current_renaming = {
             files: []
         }
@@ -30,12 +30,12 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showTextDocument(doc).then(editor => {
             })
 
-            current_renaming.save = function() {
-            
+            current_renaming.save = function () {
+
                 let new_names = doc.getText().split(/[\r\n]+/).filter(line => !!line);
 
                 if (current_renaming.files.length == new_names.length) {
-                    
+
                     current_renaming.files.forEach((file: { basepath: string; fsPath: string }, i: number) => {
                         let num = 1;
                         let new_path = file.basepath + new_names[i];
@@ -74,4 +74,4 @@ export function activate(context: vscode.ExtensionContext) {
 
 
 // This method is called when extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

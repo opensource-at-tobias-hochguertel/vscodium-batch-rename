@@ -34,9 +34,9 @@
   "scripts": {
     "compile": "tsc -p ./",
     "lint": "eslint \"src/**/*.ts\"",
-    "pretest": "npm run compile",
+    "pretest": "yarn run compile",
     "test": "node ./out/test/runTest.js",
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "yarn run compile",
     "watch": "tsc -watch -p ./"
   },
   "contributes": {
@@ -75,9 +75,9 @@
     "typescript": "^5.8.3",
     "vscode": "^1.1.37"
   },
+  "packageManager": "yarn@4.9.2",
   "engines": {
     "vscode": "^1.99.0"
   },
-  "icon": "icon.png",
-  "packageManager": "yarn@4.9.2"
+  "icon": "icon.png"
 }
