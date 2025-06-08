@@ -98,7 +98,12 @@ function launchVSCode(): void {
   // Create a workspace file for more reliable loading
   const workspaceFilePath = join(projectRoot, 'playground.code-workspace');
   const workspaceContent = {
-    folders: [{ path: playgroundPath }],
+    folders: [
+      {
+        "name": "Playground",
+        path: playgroundPath
+      }
+    ],
     settings: {}
   };
 
