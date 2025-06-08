@@ -70,8 +70,10 @@
     "@types/vscode": "^1.99.0",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
     "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^9.28.0",
     "mocha": "^5.0.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vscode": "^1.1.37"
   },
   "engines": {
     "vscode": "^1.99.0"
