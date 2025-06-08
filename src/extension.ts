@@ -6,7 +6,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Register the commands that are provided to the user
     var current_renaming: { files: any; doc?: any; save?: any }
 
-    let disposableRenameCommand = vscode.commands.registerCommand('extension.renameBatch', (clicked_file, selected_files) => {
+    let disposableRenameCommand = vscode.commands.registerCommand('extension.renameBatch', (_clicked_file, selected_files) => {
         if (!selected_files) return
 
         current_renaming = {
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         vscode.workspace.openTextDocument(openPath).then(doc => {
             current_renaming.doc = doc
-            vscode.window.showTextDocument(doc).then(editor => {
+            vscode.window.showTextDocument(doc).then(_editor => {
             })
 
             current_renaming.save = function () {
@@ -38,12 +38,20 @@ export function activate(context: vscode.ExtensionContext) {
 
                     current_renaming.files.forEach((file: { basepath: string; fsPath: string }, i: number) => {
                         let num = 1;
-                        let new_path = file.basepath + new_names[i];
+                        const newName = new_names[i];
+                        if (!newName) return;
+                        let new_path = file.basepath + newName;
                         if (file.fsPath == new_path) return;
 
-                        while (fs.existsSync(new_path)) {
-                            new_path = file.basepath + new_names[i].replace(/\.(?=[A-z0-9]*$)/, `_${num}.`);
-                            num++;
+                        // Handle duplicate filenames by adding a numeric suffix
+                        if (fs.existsSync(new_path)) {
+                            const fileExt = PathModule.extname(newName);
+                            const fileName = newName.slice(0, -fileExt.length);
+
+                            while (fs.existsSync(new_path)) {
+                                new_path = file.basepath + fileName + `_${num}` + fileExt;
+                                num++;
+                            }
                         }
 
                         fs.renameSync(file.fsPath, new_path)
