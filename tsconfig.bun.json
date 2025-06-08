@@ -1,0 +1,91 @@
+{
+  "compilerOptions": {
+    // Enable latest features
+    "lib": [
+      "ESNext",
+      "ESNext.AsyncIterable",
+      "ESNext.Array",
+      "ESNext.BigInt",
+      "ESNext.Intl",
+      "ESNext.Promise",
+      "ESNext.String",
+      "ESNext.Symbol",
+      "ESNext.WeakRef",
+
+      "ESNext.Disposable",
+      "ESNext.Iterator",
+      "ESNext.Decorators",
+      "ESNext.Regexp",
+      "ESNext.Collection",
+      "ESNext.Object",
+    ],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+
+    // NodeNext mode
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "allowArbitraryExtensions": true,
+
+    // Best practices
+    "skipLibCheck": true,
+    "incremental": true,
+
+    // Some stricter flags (disabled by default)
+    "outDir": "dist",
+    "declaration": true,
+    "composite": true,
+
+    // Add these options for decorator support
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "typeRoots": [ "./types", "./node_modules/@types" ],
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "alwaysStrict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": false,
+    // "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noErrorTruncation": true,
+    "strict": true,
+    "strictBindCallApply": true,
+    "strictBuiltinIteratorReturn": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "useUnknownInCatchVariables": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Path aliases for module resolution
+    "baseUrl": ".",
+    "paths": {
+      "*": [ "node_modules/*" ],
+    },
+  },
+  "files": [ ],
+  "include": [
+    "scripts",
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    ".vscode-test",
+    ".vscode-test.js"
+  ]
+}

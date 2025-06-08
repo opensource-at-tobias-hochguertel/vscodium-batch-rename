@@ -55,5 +55,8 @@
         "node_modules",
         ".vscode-test",
         "out"
+    ],
+    "references": [
+        { "path": "tsconfig.bun.json" }
     ]
 }
