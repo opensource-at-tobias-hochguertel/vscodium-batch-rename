@@ -95,26 +95,43 @@ function verifyProjectSetup(): void {
  * Launch VSCode with extension development path and playground workspace
  */
 function launchVSCode(): void {
+  // Create a workspace file for more reliable loading
+  const workspaceFilePath = join(projectRoot, 'playground.code-workspace');
+  const workspaceContent = {
+    folders: [{ path: playgroundPath }],
+    settings: {}
+  };
+
+  try {
+    fs.writeFileSync(workspaceFilePath, JSON.stringify(workspaceContent, null, 2));
+    logger.success(`Created temporary workspace file at: ${workspaceFilePath}`);
+  } catch (error) {
+    logger.error(`Failed to create workspace file: ${error}`);
+    process.exit(1);
+  }
+
   logger.info(`Launching VSCode with extension development path: ${projectRoot}`);
   logger.info(`Opening playground workspace: ${playgroundPath}`);
 
-  // Arguments for VSCode
+  // Arguments for VSCode - note the order is important
   const args = [
+    workspaceFilePath,                     // First argument should be the workspace/folder
     '--new-window',                        // Force new window
     '--disable-extensions',                // Disable other extensions to avoid conflicts
-    `--extensionDevelopmentPath=${projectRoot}`, // Load our extension
-    playgroundPath                         // Open playground folder
+    `--extensionDevelopmentPath=${projectRoot}`  // Load our extension
   ];
 
   // Add verbose logging if requested
   if (process.argv.includes('--verbose')) {
-    args.unshift('--verbose');
+    args.push('--verbose');
   }
+
+  logger.info(`Launching with command: code ${args.join(' ')}`);
 
   // Launch VSCode
   const child = spawn('code', args, {
     stdio: 'inherit',
-    detached: true // Allow VSCode to run independently
+    detached: false  // Don't detach, so we can see errors
   });
 
   // Handle process events
@@ -129,10 +146,15 @@ function launchVSCode(): void {
     } else {
       logger.warn(`VSCode exited with code ${code}`);
     }
-  });
 
-  // Unref the child process to allow this script to exit
-  child.unref();
+    // Clean up workspace file
+    try {
+      fs.unlinkSync(workspaceFilePath);
+      logger.info(`Removed temporary workspace file`);
+    } catch (error) {
+      logger.warn(`Failed to clean up workspace file: ${error}`);
+    }
+  });
 }
 
 /**

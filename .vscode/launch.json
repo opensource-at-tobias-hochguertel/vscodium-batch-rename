@@ -6,17 +6,29 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Extension with Playground",
+			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"${workspaceFolder}/playground"
 			],
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
 			"preLaunchTask": "yarn: watch"
+		},
+		{
+			"name": "Run Extension with Playground",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"${workspaceFolder}/playground",
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}"
+			],
+			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
+			"preLaunchTask": "ensure-playground"
 		},
 		{
 			"name": "Run Extension (Clean)",
@@ -27,19 +39,6 @@
 				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"--user-data-dir=/tmp/vscode-extension-dev"
-			],
-			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
-			"preLaunchTask": "yarn: watch"
-		},
-		{
-			"name": "Run Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--disable-extensions",
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--disable-extensions"
 			],
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
 			"preLaunchTask": "yarn: watch"

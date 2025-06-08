@@ -35,6 +35,14 @@
 				"reveal": "always",
 				"panel": "new"
 			}
+		},
+		{
+			"type": "shell",
+			"label": "ensure-playground",
+			"command": "./scripts/create-playground.ts",
+			"presentation": {
+				"reveal": "silent"
+			}
 		}
 	]
 }
