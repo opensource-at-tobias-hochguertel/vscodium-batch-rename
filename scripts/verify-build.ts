@@ -1,5 +1,11 @@
 #!/usr/bin/env bun
 
+/**
+ * VSCode Extension Build Verifier
+ *
+ * Verifies the extension build output and checks for the main file.
+ */
+
 import chalk from 'chalk';
 import { existsSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';

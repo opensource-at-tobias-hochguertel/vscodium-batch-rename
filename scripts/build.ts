@@ -1,5 +1,11 @@
 #!/usr/bin/env bun
 
+/**
+ * VSCode Extension Build Script
+ *
+ * Cleans the output directory, compiles the extension, and verifies the build output.
+ */
+
 import chalk from 'chalk';
 import { resolve } from 'path';
 

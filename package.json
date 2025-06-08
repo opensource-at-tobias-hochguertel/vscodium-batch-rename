@@ -32,8 +32,11 @@
   "publisher": "TobiasHochguertel",
   "main": "./out/extension.js",
   "scripts": {
+    "build": "yarn run clean && yarn run compile",
     "clean": "rm -rf out && mkdir -p out",
-    "compile": "yarn run clean && tsc -p ./",
+    "compile": "yarn run compile:script",
+    "compile:script": "bun scripts/build.ts",
+    "compile:tsc": "tsc -p ./",
     "dev": "bun scripts/debug-extension.ts",
     "dev:verbose": "bun scripts/debug-extension.ts --verbose",
     "esbuild": "yarn esbuild-base --sourcemap",
@@ -44,8 +47,11 @@
     "package": "vsce package",
     "publish": "vsce publish",
     "test": "node ./out/test/runTest.js",
+    "verify:build": "bun scripts/verify-build.ts",
     "vscode:prepublish": "yarn esbuild-base --minify",
-    "watch": "tsc -watch -p ./"
+    "watch": "yarn watch:tsc",
+    "watch:esbuild": "yarn esbuild-watch",
+    "watch:tsc": "tsc -watch -p ./"
   },
   "contributes": {
     "commands": [
