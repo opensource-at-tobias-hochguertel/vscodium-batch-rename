@@ -8,13 +8,13 @@
  */
 
 import chalk from 'chalk';
-import { spawn } from 'child_process';
-import fs from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 // Configuration
 const projectRoot = resolve(import.meta.dir, '..');
 const playgroundPath = join(projectRoot, 'playground');
+const workspaceFilePath = join(projectRoot, 'playground.code-workspace');
 
 // Logger setup for consistent output
 const logger = {
@@ -27,12 +27,12 @@ const logger = {
 /**
  * Verify the project structure and compilation status
  */
-function verifyProjectSetup(): void {
+async function verifyProjectSetup(): Promise<void> {
   // Check if package.json exists
   const packagePath = join(projectRoot, 'package.json');
-  if (fs.existsSync(packagePath)) {
+  if (existsSync(packagePath)) {
     logger.success(`Found package.json at: ${packagePath}`);
-    const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    const pkg = JSON.parse(await Bun.file(packagePath).text());
     logger.info(`Extension name: ${pkg.name}`);
   } else {
     logger.error(`package.json not found at: ${packagePath}`);
@@ -41,7 +41,7 @@ function verifyProjectSetup(): void {
 
   // Check for output directory
   const outDir = join(projectRoot, 'out');
-  if (fs.existsSync(outDir)) {
+  if (existsSync(outDir)) {
     logger.success(`Output directory found at: ${outDir}`);
   } else {
     logger.warn(`Output directory not found at: ${outDir}. Extension may not be compiled.`);
@@ -49,14 +49,16 @@ function verifyProjectSetup(): void {
 
     try {
       // Auto-compile if output directory doesn't exist
-      const { stdout: _stdout, stderr, exitCode } = Bun.spawnSync<"pipe", "pipe">(['yarn', 'compile'], {
-        cwd: projectRoot
+      const proc = Bun.spawnSync(['yarn', 'compile'], {
+        cwd: projectRoot,
+        stderr: 'pipe',
+        stdout: 'pipe'
       });
 
-      if (exitCode === 0) {
+      if (proc.exitCode === 0) {
         logger.success(`Compilation successful`);
       } else {
-        logger.error(`Compilation failed: ${stderr.toString()}`);
+        logger.error(`Compilation failed: ${proc.stderr.toString()}`);
         process.exit(1);
       }
     } catch (error) {
@@ -66,20 +68,22 @@ function verifyProjectSetup(): void {
   }
 
   // Check for playground directory
-  if (!fs.existsSync(playgroundPath)) {
+  if (!existsSync(playgroundPath)) {
     logger.warn(`Playground directory not found at: ${playgroundPath}`);
     logger.info(`Creating playground directory...`);
 
     try {
       // Auto-create playground if it doesn't exist
-      const { stdout: _stdout, stderr, exitCode } = Bun.spawnSync<"pipe", "pipe">(['./scripts/create-playground.ts'], {
-        cwd: projectRoot
+      const proc = Bun.spawnSync(['./scripts/create-playground.ts'], {
+        cwd: projectRoot,
+        stderr: 'pipe',
+        stdout: 'pipe'
       });
 
-      if (exitCode === 0) {
+      if (proc.exitCode === 0) {
         logger.success(`Playground created successfully`);
       } else {
-        logger.error(`Failed to create playground: ${stderr.toString()}`);
+        logger.error(`Failed to create playground: ${proc.stderr.toString()}`);
         process.exit(1);
       }
     } catch (error) {
@@ -92,84 +96,84 @@ function verifyProjectSetup(): void {
 }
 
 /**
- * Launch VSCode with extension development path and playground workspace
+ * Create a workspace file that VSCode will use to load the playground
  */
-function launchVSCode(): void {
+function createWorkspaceFile(): void {
   // Create a workspace file for more reliable loading
-  const workspaceFilePath = join(projectRoot, 'playground.code-workspace');
   const workspaceContent = {
-    folders: [
-      {
-        "name": "Playground",
-        path: playgroundPath
-      }
-    ],
-    settings: {}
+    folders: [{ path: playgroundPath }],
+    settings: {
+      // Optional: Add workspace-specific settings here
+      'editor.formatOnSave': true
+    }
   };
 
   try {
-    fs.writeFileSync(workspaceFilePath, JSON.stringify(workspaceContent, null, 2));
-    logger.success(`Created temporary workspace file at: ${workspaceFilePath}`);
+    writeFileSync(workspaceFilePath, JSON.stringify(workspaceContent, null, 2));
+    logger.success(`Created workspace file at: ${workspaceFilePath}`);
   } catch (error) {
     logger.error(`Failed to create workspace file: ${error}`);
     process.exit(1);
   }
+}
 
+/**
+ * Launch VSCode with extension development path and playground workspace
+ */
+function launchVSCode(): void {
   logger.info(`Launching VSCode with extension development path: ${projectRoot}`);
-  logger.info(`Opening playground workspace: ${playgroundPath}`);
+  logger.info(`Opening playground workspace: ${workspaceFilePath}`);
 
-  // Arguments for VSCode - note the order is important
-  const args = [
-    workspaceFilePath,                     // First argument should be the workspace/folder
-    '--new-window',                        // Force new window
-    '--disable-extensions',                // Disable other extensions to avoid conflicts
+  // The command to launch VSCode - workspace file first, then flags
+  const cmd = [
+    'code',
+    workspaceFilePath,           // First argument should be the workspace file
+    '--new-window',              // Force new window
+    '--disable-extensions',      // Disable other extensions to avoid conflicts
     `--extensionDevelopmentPath=${projectRoot}`  // Load our extension
   ];
 
   // Add verbose logging if requested
   if (process.argv.includes('--verbose')) {
-    args.push('--verbose');
+    cmd.push('--verbose');
   }
 
-  logger.info(`Launching with command: code ${args.join(' ')}`);
+  logger.info(`Launching with command: ${cmd.join(' ')}`);
 
-  // Launch VSCode
-  const child = spawn('code', args, {
-    stdio: 'inherit',
-    detached: false  // Don't detach, so we can see errors
-  });
+  // Important: Do NOT use Bun.spawnSync here as it will block until VSCode exits
+  // Instead, use Bun.spawn and let it run independently
+  const proc = Bun.spawn({
+    cmd,
+    stdio: ['inherit', 'inherit', 'inherit'],
+    onExit(_proc, _exitCode, _signalCode, error) {
+      if (error) {
+        logger.error(`VSCode process error: ${error}`);
+      }
 
-  // Handle process events
-  child.on('error', (error) => {
-    logger.error(`Failed to start VSCode: ${error.message}`);
-    process.exit(1);
-  });
-
-  child.on('close', (code) => {
-    if (code === 0) {
-      logger.success(`VSCode launched successfully`);
-    } else {
-      logger.warn(`VSCode exited with code ${code}`);
-    }
-
-    // Clean up workspace file
-    try {
-      fs.unlinkSync(workspaceFilePath);
-      logger.info(`Removed temporary workspace file`);
-    } catch (error) {
-      logger.warn(`Failed to clean up workspace file: ${error}`);
+      // Do NOT delete the workspace file here - VSCode may still be using it
+      // The file is small and temporary, so it's better to leave it
     }
   });
+
+  // Don't wait for VSCode to exit - let it run independently
+  proc.unref();
+
+  logger.success(`VSCode process launched with PID: ${proc.pid}`);
+  logger.info(`Note: The workspace file at ${workspaceFilePath} will remain for future sessions.`);
+  logger.info(`      You can delete it manually if no longer needed.`);
 }
 
 /**
  * Main function
  */
-function main(): void {
+async function main(): Promise<void> {
   logger.info(`Starting extension debug session at ${new Date().toISOString()}`);
 
   // Verify project structure
-  verifyProjectSetup();
+  await verifyProjectSetup();
+
+  // Create workspace file (if it doesn't exist or needs updating)
+  createWorkspaceFile();
 
   // Launch VSCode
   launchVSCode();
@@ -182,4 +186,4 @@ function main(): void {
 }
 
 // Run the script
-main();
+await main();
