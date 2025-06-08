@@ -6,6 +6,19 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Run Extension with Playground",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"${workspaceFolder}/playground"
+			],
+			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
+			"preLaunchTask": "yarn: watch"
+		},
+		{
 			"name": "Run Extension (Clean)",
 			"type": "extensionHost",
 			"request": "launch",
@@ -24,6 +37,7 @@
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"args": [
+				"--disable-extensions",
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"--disable-extensions"
 			],

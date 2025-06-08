@@ -17,6 +17,24 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"type": "shell",
+			"label": "create playground",
+			"command": "./scripts/create-playground.ts",
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"type": "shell",
+			"label": "debug with playground",
+			"command": "./scripts/debug-extension.ts",
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
 		}
 	]
 }
