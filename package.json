@@ -76,5 +76,6 @@
   "engines": {
     "vscode": "^1.99.0"
   },
-  "icon": "icon.png"
+  "icon": "icon.png",
+  "packageManager": "yarn@4.9.2"
 }
