@@ -1,24 +1,44 @@
 {
-  "name": "batch-rename-extension",
-  "displayName": "Batch Rename",
-  "description": "Batch rename files in the explorer inside a text editor",
-  "version": "0.0.7",
-  "publisher": "JannisX11",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JannisX11/batch-rename"
-  },
-  "engines": {
-    "vscode": "^1.74.0"
-  },
+  "name": "batch-rename-fork",
+  "displayName": "Batch Rename (Fork)",
+  "version": "1.0.0",
+  "description": "Batch rename files in the explorer inside a text editor with improved error handling and UX",
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:extension.renameBatch"
+  "keywords": [
+    "rename",
+    "multiple",
+    "batch",
+    "extension",
+    "vscode"
   ],
-  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opensource-at-tobias-hochguertel/vscodium-batch-rename"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Tobias Hochgürtel",
+    "url": "https://github.com/tobiashochguertel"
+  },
+  "contributors": [
+    {
+      "name": "JannisX11",
+      "url": "https://github.com/JannisX11",
+      "description": "Original author"
+    }
+  ],
+  "publisher": "TobiasHochguertel",
   "main": "./out/src/extension",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "lint": "eslint \"src/**/*.ts\"",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "vscode:prepublish": "npm run compile",
+    "watch": "tsc -watch -p ./"
+  },
   "contributes": {
     "commands": [
       {
@@ -37,32 +57,24 @@
       ]
     }
   },
-  "scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"lint": "eslint \"src/**/*.ts\"",
-		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile",
-		"test": "node ./out/test/runTest.js"
-	},
-  "devDependencies": {
-    "@types/mocha": "^2.2.48",
-    "@types/node": "^16.18.34",
-    "@types/vscode": "^1.73.0",
-    "@typescript-eslint/eslint-plugin": "^6.7.0",
-		"@typescript-eslint/parser": "^6.7.0",
-    "mocha": "^5.0.0",
-    "typescript": "^5.3.2"
-  },
+  "activationEvents": [
+    "onCommand:extension.renameBatch"
+  ],
   "dependencies": {
-    "opn": "^5.2.0",
+    "opn": "^6.0.0",
     "path": "^0.12.7"
   },
-  "license": "MIT",
-  "keywords": [
-    "rename",
-    "multiple",
-    "extension",
-    "vscode"
-  ]
+  "devDependencies": {
+    "@types/mocha": "^2.2.48",
+    "@types/node": "^17.0.45",
+    "@types/vscode": "^1.99.0",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "mocha": "^5.0.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "icon": "icon.png"
 }
