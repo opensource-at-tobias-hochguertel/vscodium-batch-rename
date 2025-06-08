@@ -32,10 +32,10 @@
   "publisher": "TobiasHochguertel",
   "main": "./out/extension.js",
   "scripts": {
-    "build": "yarn run clean && yarn run compile",
+    "build": "yarn run clean && yarn run build:script",
+    "build:script": "bun scripts/build.ts",
     "clean": "rm -rf out && mkdir -p out",
-    "compile": "yarn run compile:script",
-    "compile:script": "bun scripts/build.ts",
+    "compile": "yarn run compile:tsc",
     "compile:tsc": "tsc -p ./",
     "dev": "yarn build && bun scripts/debug-extension.ts",
     "dev:verbose": "bun run dev --verbose",
