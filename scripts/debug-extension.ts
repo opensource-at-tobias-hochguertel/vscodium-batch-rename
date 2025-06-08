@@ -49,7 +49,7 @@ function verifyProjectSetup(): void {
 
     try {
       // Auto-compile if output directory doesn't exist
-      const { stdout, stderr, exitCode } = Bun.spawnSync(['yarn', 'compile'], {
+      const { stdout: _stdout, stderr, exitCode } = Bun.spawnSync<"pipe", "pipe">(['yarn', 'compile'], {
         cwd: projectRoot
       });
 
@@ -72,7 +72,7 @@ function verifyProjectSetup(): void {
 
     try {
       // Auto-create playground if it doesn't exist
-      const { stdout, stderr, exitCode } = Bun.spawnSync(['./scripts/create-playground.ts'], {
+      const { stdout: _stdout, stderr, exitCode } = Bun.spawnSync<"pipe", "pipe">(['./scripts/create-playground.ts'], {
         cwd: projectRoot
       });
 
