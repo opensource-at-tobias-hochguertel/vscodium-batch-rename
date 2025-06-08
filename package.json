@@ -30,7 +30,7 @@
     }
   ],
   "publisher": "TobiasHochguertel",
-  "main": "./out/src/extension",
+  "main": "./out/extension.js",
   "scripts": {
     "clean": "rm -rf out && mkdir -p out",
     "compile": "yarn run clean && tsc -p ./",
