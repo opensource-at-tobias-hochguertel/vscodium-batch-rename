@@ -28,6 +28,7 @@
     "noPropertyAccessFromIndexSignature": true,
 
     // Module Resolution
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "baseUrl": ".",
     "paths": {
       "*": ["node_modules/*"]

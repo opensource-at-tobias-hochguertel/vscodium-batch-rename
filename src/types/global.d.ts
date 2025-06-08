@@ -1,3 +1,4 @@
+// This is a declaration file - do not import it directly in runtime code
 import * as vscode from "vscode";
 
 // Extend the global namespace correctly

@@ -34,10 +34,6 @@ export class ExtensionContextManager {
   public initialize(context: vscode.ExtensionContext): void {
     this._context = context;
 
-    // Maintain backward compatibility with existing code
-    // that might use the global context
-    global.__batchRenameContext = context;
-
     logger.debug("Extension context initialized");
   }
 

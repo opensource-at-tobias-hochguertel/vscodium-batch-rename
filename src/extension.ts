@@ -9,9 +9,6 @@ export function activate(context: vscode.ExtensionContext): void {
     // Initialize extension context manager (type-safe)
     extensionContext.initialize(context);
 
-    // For backward compatibility with existing code
-    global.__batchRenameContext = context;
-
     const extensionPackage = context.extension.packageJSON as {
       version: string;
     };
@@ -94,7 +91,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-  // Clean up global context
-  global.__batchRenameContext = undefined;
   logger.debug("Batch Rename extension deactivated");
 }

@@ -261,6 +261,7 @@ export class BatchRenamer {
           logger.debug(
             `Could not open ${op.toUri.fsPath}: ${formatErrorValue(error)}`,
           );
+          logger.debug(`Continuing to next file`);
           // Continue to next file
         }
       }
