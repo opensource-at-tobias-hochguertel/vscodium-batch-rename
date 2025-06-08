@@ -1,10 +1,29 @@
 #!/usr/bin/env bun
+// scripts/debug-extension.ts
 
 /**
  * VSCode Extension Debug Helper
  *
  * Launches VSCode with the extension loaded and playground directory opened
  * for efficient manual testing.
+ *
+ * Environment variables:
+ * - `IDE`: The path to the IDE to launch (default: `code`)
+ *
+ * This script will:
+ * 1. Verify the project structure and compilation status
+ * 2. Create a workspace file for VSCode (if it doesn't exist [default: `./playground.code-workspace`])
+ * 3. Launch VSCode with the extension loaded ([default: `${process.env['IDE'] || 'code'}`, `${workspaceFilePath}`, `--new-window`, `--disable-extensions`, `--extensionDevelopmentPath=${projectRoot}`])
+ *
+ * Usage:
+ * - `bun run dev` - Launch VSCode with the extension loaded
+ * - `bun run dev:verbose` - Launch VSCode with verbose logging
+ *
+ * Note: This script will automatically compile the extension if needed.
+ *
+ * Required commands from package.json:
+ * - `bun scripts/create-playground.ts` - Creates a playground directory (if it doesn't exist [default: `./playground`])
+ * - `yarn compile` - Compiles the extension (if the output directory is missing [default: `./out`])
  */
 
 import chalk from 'chalk';
@@ -126,8 +145,8 @@ function launchVSCode(): void {
 
   // The command to launch VSCode - workspace file first, then flags
   const cmd = [
-    'windsurf',
-    workspaceFilePath,           // First argument should be the workspace file
+    `${process.env['IDE'] || 'code'}`,
+    `${workspaceFilePath}`,           // First argument should be the workspace file
     '--new-window',              // Force new window
     '--disable-extensions',      // Disable other extensions to avoid conflicts
     `--extensionDevelopmentPath=${projectRoot}`  // Load our extension

@@ -1,8 +1,35 @@
 #!/usr/bin/env bun
+// scripts/debug-path.ts
+
+/**
+ * VSCode Extension Debug Path Helper
+ *
+ * Examines the VSCode extension structure and launches VSCode with diagnostics
+ * to help debug extension path and loading issues.
+ *
+ * Environment variables:
+ * - `IDE`: The path to the IDE to launch ([default: `code`])
+ *
+ * This script will:
+ * 1. Verify the project structure (package.json)
+ * 2. Check for the output directory ([default: `./out`])
+ * 3. Launch VSCode with verbose logging and extension development path ([default: `${process.env['IDE'] || 'code'}`, `--verbose`, `--extensionDevelopmentPath=${projectRoot}`, `--disable-extensions`, `--new-window`])
+ *
+ * Usage:
+ * - `bun scripts/debug-path.ts` - Run the path diagnostics
+ *
+ * Common issues this script helps solve:
+ * - Incorrect project structure
+ * - Missing output directory
+ * - Extension loading path issues
+ *
+ * Required commands from package.json:
+ * none
+ */
 
 import { spawn } from 'child_process';
-import { join, resolve } from 'path';
 import fs from 'fs';
+import { join, resolve } from 'path';
 
 const projectRoot = resolve(import.meta.dir, '..');
 console.log(`Project root: ${projectRoot}`);
@@ -27,9 +54,9 @@ if (fs.existsSync(outDir)) {
 
 // Launch VSCode with diagnostics
 console.log('\nLaunching VSCode with diagnostics...');
-const child = spawn('code', [
+const child = spawn(`${process.env['IDE'] || 'code'}`, [
   '--verbose',
-  '--extensionDevelopmentPath=' + projectRoot,
+  `--extensionDevelopmentPath=${projectRoot}`,
   '--disable-extensions',
   '--new-window'
 ], {

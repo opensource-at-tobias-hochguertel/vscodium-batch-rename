@@ -1,13 +1,33 @@
 #!/usr/bin/env bun
+// scripts/dev.ts
+
 /**
  * VSCode Extension Development Helper
  *
  * Provides utilities for developing and packaging the extension
+ *
+ * Environment variables:
+ * - `IDE`: The path to the IDE to launch ([default: `code`])
+ *
+ * This script will:
+ * - Compile the extension
+ * - Launch VSCode with the extension loaded with the playground workspace opened ([default: `${process.env['IDE'] || 'code'}`, `${workspaceFilePath}`, `--new-window`, `--disable-extensions`, `--extensionDevelopmentPath=${projectRoot}`])
+ *
+ * Usage:
+ * - `bun scripts/dev.ts` - Run the development utilities
+ *
+ * Common issues this script helps solve:
+ *
+ * Required commands from package.json:
+ * - `yarn compile` - Compiles the extension
+ * - `yarn watch` - Watches for changes and recompiles
+ * - `yarn package` - Packages the extension
+ * - `code` - Launches VSCode
  */
 
 import chalk from 'chalk';
 import { spawn } from 'child_process';
-import { join } from 'path';
+import path, { join } from 'path';
 
 const ROOT_DIR = join(import.meta.dir, '..');
 
@@ -45,6 +65,8 @@ async function exec(command: string, args: string[] = [], options: any = {}): Pr
 const args = process.argv.slice(2);
 const command = args[0] || 'help';
 
+const workspaceFilePath = path.join(ROOT_DIR, 'playground.code-workspace');
+
 // Main function
 async function main() {
   switch (command) {
@@ -64,7 +86,15 @@ async function main() {
 
     case 'launch':
       logger.info('Launching VSCode with extension...');
-      await exec('code', ['--extensionDevelopmentPath', ROOT_DIR]);
+      await exec(
+        `${process.env['IDE'] || 'code'}`,
+        [
+          `${workspaceFilePath}`,         // First argument should be the workspace file
+          '--new-window',                 // Force new window
+          '--disable-extensions',         // Disable other extensions to avoid conflicts
+          `--extensionDevelopmentPath=${ROOT_DIR}`  // Load our extension
+        ]
+      );
       break;
 
     case 'help':

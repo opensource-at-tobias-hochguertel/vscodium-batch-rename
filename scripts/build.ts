@@ -1,9 +1,27 @@
 #!/usr/bin/env bun
+// scripts/build.ts
 
 /**
  * VSCode Extension Build Script
  *
  * Cleans the output directory, compiles the extension, and verifies the build output.
+ *
+ * This script will:
+ * - Clean the output directory
+ * - Compile the extension
+ * - Verify the build output
+ *
+ * Usage:
+ * - `bun scripts/build.ts` - Run the this script (build)
+ *
+ * Common issues this script helps solve:
+ * - Mismatched main entry in package.json
+ * - Missing output files after build
+ *
+ * Required commands from package.json:
+ * - `bun scripts/verify-build.ts` - Run the this script (verification)
+ * - `yarn clean` - Clean the output directory
+ * - `yarn compile` - Compiles the extension
  */
 
 import chalk from 'chalk';

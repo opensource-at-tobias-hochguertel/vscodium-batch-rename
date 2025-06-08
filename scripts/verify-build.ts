@@ -1,9 +1,28 @@
 #!/usr/bin/env bun
+// scripts/verify-build.ts
 
 /**
  * VSCode Extension Build Verifier
  *
  * Verifies the extension build output and checks for the main file.
+ *
+ * This script will:
+ * - Check if the main file exists
+ * - Check if the source map exists
+ * - Check if the output directory exists
+ * - If main file is not found, search for potential extension files
+ * - Provide build recommendations
+ *
+ * Usage:
+ * - `bun scripts/verify-build.ts` - Run the this script (verification)
+ *
+ * Common issues this script helps solve:
+ * - Mismatched main entry in package.json
+ * - Missing output files after build
+ * - Identifying potential extension files when build output is in unexpected location
+ *
+ * Required commands from package.json:
+ * - `bun scripts/build.ts` - Run the this script (build)
  */
 
 import chalk from 'chalk';
