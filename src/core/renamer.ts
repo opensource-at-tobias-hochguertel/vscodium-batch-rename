@@ -5,12 +5,23 @@ import { RenameOperation, RenameRequest, RenameResult } from "../types";
 import { fileExists, validateFileName } from "../utils/filesystem";
 import { formatErrorValue } from "../utils/formatters";
 import { logger } from "../utils/logger";
+import { SessionManager } from "./session";
 
 /**
  * Handles batch renaming of files with VSCode workspace edit integration
  * for proper undo/redo support.
  */
 export class BatchRenamer {
+  private sessionManager: SessionManager;
+
+  /**
+   * Create a new BatchRenamer
+   * @param sessionManager Session manager for updating file references
+   */
+  constructor(sessionManager: SessionManager) {
+    this.sessionManager = sessionManager;
+  }
+
   /**
    * Validates a list of rename operations without performing them
    * @param requests Array of rename requests containing paired file and new name
@@ -31,6 +42,12 @@ export class BatchRenamer {
     for (const request of requests) {
       const { file, newName } = request;
 
+      // Skip if newName is missing or empty
+      if (!newName?.trim()) {
+        logger.debug(`Skipping empty new name for: ${file.fsPath}`);
+        continue;
+      }
+
       // Validate the new name
       if (!validateFileName(newName)) {
         errors.push(`Invalid filename: "${newName}" contains path separators`);
@@ -47,17 +64,31 @@ export class BatchRenamer {
       }
 
       // Check if file exists
-      if (!(await fileExists(file.fsPath))) {
-        errors.push(`File not found: ${file.fsPath}`);
+      try {
+        if (!(await fileExists(file.fsPath))) {
+          errors.push(`File not found: ${file.fsPath}`);
+          continue;
+        }
+      } catch (error) {
+        errors.push(
+          `Error checking file existence for ${file.fsPath}: ${formatErrorValue(error)}`,
+        );
         continue;
       }
 
       // Check if target already exists (unless it's a case-only change)
-      if (
-        (await fileExists(newPath)) &&
-        file.fsPath.toLowerCase() !== newPath.toLowerCase()
-      ) {
-        errors.push(`Target already exists: ${newPath}`);
+      try {
+        if (
+          (await fileExists(newPath)) &&
+          file.fsPath.toLowerCase() !== newPath.toLowerCase()
+        ) {
+          errors.push(`Target already exists: ${newPath}`);
+          continue;
+        }
+      } catch (error) {
+        errors.push(
+          `Error checking target existence for ${newPath}: ${formatErrorValue(error)}`,
+        );
         continue;
       }
 
@@ -78,6 +109,8 @@ export class BatchRenamer {
 
   /**
    * Performs batch renaming of files with full undo/redo support
+   * @param operations Rename operations to perform
+   * @returns Results of the rename operation
    */
   public async renameWithWorkspaceEdit(
     operations: RenameOperation[],
@@ -111,6 +144,11 @@ export class BatchRenamer {
           `Successfully applied workspace edit with ${operations.length} operations`,
         );
         result.succeeded = operations.length;
+
+        // Update session file references after successful rename
+        for (const op of operations) {
+          this.sessionManager.updateSessionAfterRename(op.from, op.to);
+        }
       } else {
         logger.error("Failed to apply workspace edit");
         // Consider all operations failed
@@ -126,42 +164,6 @@ export class BatchRenamer {
         path: op.from,
         error: error instanceof Error ? error.message : formatErrorValue(error),
       }));
-    }
-
-    return result;
-  }
-
-  /**
-   * Fallback method for renaming files without workspace edit
-   * Uses the traditional fs.rename approach (no undo support)
-   */
-  public async renameWithFallback(
-    operations: RenameOperation[],
-  ): Promise<RenameResult> {
-    if (operations.length === 0) {
-      return { succeeded: 0, failed: [], skipped: 0 };
-    }
-
-    const result: RenameResult = {
-      succeeded: 0,
-      failed: [],
-      skipped: 0,
-    };
-
-    for (const op of operations) {
-      try {
-        const fs = await import("fs/promises");
-        await fs.rename(op.from, op.to);
-        logger.debug(`Renamed: ${op.from} → ${op.to}`);
-        result.succeeded++;
-      } catch (error) {
-        logger.error(`Failed to rename ${op.from}: ${formatErrorValue(error)}`);
-        result.failed = operations.map((op) => ({
-          path: op.from,
-          error:
-            error instanceof Error ? error.message : formatErrorValue(error),
-        }));
-      }
     }
 
     return result;

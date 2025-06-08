@@ -1,9 +1,10 @@
 // src/commands/batchRenameCommand.ts
-import path from "path";
+import * as path from "path";
 import * as vscode from "vscode";
 import { BatchRenamer } from "../core/renamer";
 import { SessionManager } from "../core/session";
-import { RenameOperation, RenameRequest } from "../types";
+import { RenameFile, RenameOperation, RenameRequest } from "../types";
+import { formatErrorValue } from "../utils/formatters";
 import { logger } from "../utils/logger";
 
 /**
@@ -13,6 +14,7 @@ export class BatchRenameCommandHandler {
   private readonly sessionManager: SessionManager;
   private readonly renamer: BatchRenamer;
   private readonly context: vscode.ExtensionContext;
+  private isProcessingRename: boolean = false;
 
   /**
    * Create a new batch rename command handler
@@ -20,10 +22,13 @@ export class BatchRenameCommandHandler {
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
     this.sessionManager = new SessionManager(context.extensionPath);
-    this.renamer = new BatchRenamer();
+    this.renamer = new BatchRenamer(this.sessionManager);
 
     // Register the save handler
     this.registerSaveHandler();
+
+    // Register the close handler
+    this.registerCloseHandler();
   }
 
   /**
@@ -63,11 +68,14 @@ export class BatchRenameCommandHandler {
       );
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        error instanceof Error ? error.message : formatErrorValue(error);
       logger.error(`Error starting batch rename: ${errorMessage}`);
       vscode.window.showErrorMessage(
         `Error starting batch rename: ${errorMessage}`,
       );
+
+      // Make sure to clean up if an error occurs
+      await this.sessionManager.clearSession();
     }
   }
 
@@ -88,20 +96,94 @@ export class BatchRenameCommandHandler {
         }
 
         try {
+          // Prevent concurrent rename operations
+          if (this.isProcessingRename) {
+            logger.warn("Ignoring save while rename is in progress");
+            // Cancel the save operation to prevent file contention
+            event.waitUntil(
+              Promise.reject(new Error("Rename already in progress")),
+            );
+            return;
+          }
+
+          this.isProcessingRename = true;
+
+          // Verify all files still exist before proceeding
+          if (!(await this.sessionManager.verifySessionFiles())) {
+            throw new Error(
+              "Some files in the session no longer exist. Reopen the rename dialog to continue.",
+            );
+          }
+
           await this.performRename(event.document);
         } catch (error) {
           const errorMessage =
-            error instanceof Error ? error.message : String(error);
+            error instanceof Error ? error.message : formatErrorValue(error);
           logger.error(`Error during batch rename: ${errorMessage}`);
           vscode.window.showErrorMessage(
             `Error during batch rename: ${errorMessage}`,
           );
+
+          // Cancel the save operation to prevent further issues
+          event.waitUntil(Promise.reject(new Error("Rename operation failed")));
+        } finally {
+          this.isProcessingRename = false;
         }
       },
     );
 
     // Add the save listener to the context
     this.context.subscriptions.push(saveListener);
+  }
+
+  /**
+   * Register handler for when an editor is closed
+   */
+  private registerCloseHandler(): void {
+    const closeListener = vscode.window.onDidChangeVisibleTextEditors(
+      async (editors) => {
+        const session = this.sessionManager.getCurrentSession();
+
+        // Early return if no active session or document
+        if (!session || !session.document) {
+          return;
+        }
+
+        // Check if our temp document is still open
+        const tempEditorStillOpen = editors.some((editor) => {
+          if (!session || !session.document) {
+            return false;
+          }
+          return editor.document.uri.fsPath === session.document.uri.fsPath;
+        });
+
+        if (!tempEditorStillOpen && !this.isProcessingRename) {
+          logger.debug("Temp file editor was closed, cleaning up session");
+          await this.sessionManager.clearSession();
+        }
+      },
+    );
+
+    this.context.subscriptions.push(closeListener);
+  }
+
+  /**
+   * Create type-safe rename requests with definite newNames
+   */
+  private createRenameRequests(
+    files: RenameFile[],
+    newNames: string[],
+  ): RenameRequest[] {
+    // Create rename requests - pairing files with their new names
+    return files
+      .map((file, index): RenameRequest | null => {
+        const newName = newNames[index];
+        // Skip entries with undefined or empty newNames
+        return newName !== undefined && newName.trim() !== ""
+          ? { file, newName }
+          : null;
+      })
+      .filter((request): request is RenameRequest => request !== null);
   }
 
   /**
@@ -122,28 +204,30 @@ export class BatchRenameCommandHandler {
       const newNames =
         this.sessionManager.getNewFilenamesFromDocument(document);
 
+      if (newNames.length === 0) {
+        logger.info("No valid filenames found in document");
+        vscode.window.showInformationMessage(
+          "No valid filenames found. Operation cancelled.",
+        );
+        return;
+      }
+
       if (session.files.length !== newNames.length) {
         throw new Error(
           `The number of lines (${newNames.length}) does not match the number of selected files (${session.files.length}). Operation cancelled.`,
         );
       }
 
-      // Create rename requests - pairing files with their new names
-      const renameRequests: RenameRequest[] = session.files
-        .map((file, index) => {
-          const newName = newNames[index];
-          // Only create valid requests where newName is defined
-          return newName !== undefined ? { file, newName } : null;
-        })
-        .filter((request): request is RenameRequest => request !== null);
+      // Create type-safe rename requests
+      const renameRequests = this.createRenameRequests(session.files, newNames);
 
-      // Validate we still have the expected number of requests
+      // Validate the number of requests matches expected count
       if (renameRequests.length !== session.files.length) {
-        logger.error(
+        logger.warn(
           `Expected ${session.files.length} rename requests but got ${renameRequests.length}`,
         );
         throw new Error(
-          `Some filenames could not be properly mapped. Operation cancelled.`,
+          "Some filenames could not be properly mapped. Operation cancelled.",
         );
       }
 
@@ -154,16 +238,16 @@ export class BatchRenameCommandHandler {
           await this.renamer.validateRenameOperations(renameRequests);
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : String(error);
+          error instanceof Error ? error.message : formatErrorValue(error);
         logger.error(`Validation error: ${errorMessage}`);
         vscode.window.showErrorMessage(`Validation error: ${errorMessage}`);
         return;
       }
 
       if (operations.length === 0) {
-        logger.info("No files to rename (names unchanged)");
+        logger.info("No files to rename (names unchanged or invalid)");
         vscode.window.showInformationMessage(
-          "No files to rename (names unchanged)",
+          "No files to rename (names unchanged or invalid)",
         );
         await this.sessionManager.clearSession();
         return;
@@ -225,15 +309,15 @@ export class BatchRenameCommandHandler {
           }
 
           progress.report({ increment: 100 });
+
+          // Clean up session after successful rename
+          if (result.succeeded > 0) {
+            await this.sessionManager.clearSession();
+          }
         },
       );
-
-      // Cleanup
-      await this.sessionManager.clearSession();
     } catch (error) {
-      throw new Error(
-        `Error processing rename: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new Error(`Error processing rename: ${formatErrorValue(error)}`);
     }
   }
 }

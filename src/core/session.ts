@@ -5,17 +5,18 @@ import { RenameFile, RenamingSession } from "../types";
 import {
   deleteFileIfExists,
   ensureDirectory,
+  fileExists,
   writeFile,
 } from "../utils/filesystem";
 import { logger } from "../utils/logger";
-import { formatErrorValue } from "../utils/formatters";
 
 /**
- * Manages renaming sessions
+ * Manages renaming sessions with improved state tracking
  */
 export class SessionManager {
   private currentSession?: RenamingSession;
   private readonly extensionPath: string;
+  private sessionLock: boolean = false;
 
   /**
    * Create a new session manager
@@ -37,39 +38,98 @@ export class SessionManager {
   public async createSession(
     selectedFiles: vscode.Uri[],
   ): Promise<RenamingSession> {
-    // Clear any existing session
-    await this.clearSession();
-
-    // Create temp directory
-    const tempDir = path.join(this.extensionPath, "temp");
-    await ensureDirectory(tempDir);
-
-    const tempFilePath = path.join(tempDir, ".Batch Rename.txt");
-
-    // Process files
-    const files: RenameFile[] = selectedFiles.map((uri) => {
-      const fsPath = uri.fsPath;
-      const basename = path.basename(fsPath);
-      return {
-        fsPath,
-        basename,
-        basepath: fsPath.substring(0, fsPath.length - basename.length),
-        uri,
-      };
-    });
-
-    if (files.length === 0) {
-      throw new Error("No valid files found for renaming");
+    // Prevent concurrent session operations
+    if (this.sessionLock) {
+      throw new Error("A session operation is already in progress");
     }
 
-    // Create and store session
-    this.currentSession = {
-      files,
-      tempFilePath,
-    };
+    this.sessionLock = true;
 
-    logger.info(`Created session with ${files.length} files`);
-    return this.currentSession;
+    try {
+      // Clear any existing session
+      await this.clearSession();
+
+      // Create temp directory
+      const tempDir = path.join(this.extensionPath, "temp");
+      await ensureDirectory(tempDir);
+
+      // Generate a unique session ID to avoid conflicts
+      const sessionId = Date.now().toString();
+      const tempFilePath = path.join(tempDir, `.Batch Rename ${sessionId}.txt`);
+
+      // Process files
+      const files: RenameFile[] = [];
+
+      // Validate files exist before adding to session
+      for (const uri of selectedFiles) {
+        const fsPath = uri.fsPath;
+
+        if (await fileExists(fsPath)) {
+          const basename = path.basename(fsPath);
+          files.push({
+            fsPath,
+            basename,
+            basepath: fsPath.substring(0, fsPath.length - basename.length),
+            uri,
+          });
+        } else {
+          logger.warn(`File not found, skipping: ${fsPath}`);
+        }
+      }
+
+      if (files.length === 0) {
+        throw new Error("No valid files found for renaming");
+      }
+
+      // Create and store session
+      this.currentSession = {
+        files,
+        tempFilePath,
+      };
+
+      logger.info(`Created session with ${files.length} files`);
+      return this.currentSession;
+    } finally {
+      this.sessionLock = false;
+    }
+  }
+
+  /**
+   * Update file references in the current session after rename
+   * @param oldPath Original file path
+   * @param newPath New file path
+   */
+  public updateSessionAfterRename(oldPath: string, newPath: string): void {
+    if (!this.currentSession) {
+      logger.warn(
+        "Attempted to update session file references with no active session",
+      );
+      return;
+    }
+
+    const session = this.currentSession;
+
+    // Find and update the renamed file in the session
+    const fileIndex = session.files.findIndex(
+      (file) => file.fsPath === oldPath,
+    );
+
+    if (fileIndex >= 0) {
+      const newBasename = path.basename(newPath);
+      const newUri = vscode.Uri.file(newPath);
+
+      // Update file references
+      session.files[fileIndex] = {
+        fsPath: newPath,
+        basename: newBasename,
+        basepath: newPath.substring(0, newPath.length - newBasename.length),
+        uri: newUri,
+      };
+
+      logger.debug(`Updated session file reference: ${oldPath} → ${newPath}`);
+    } else {
+      logger.warn(`Could not find file in session: ${oldPath}`);
+    }
   }
 
   /**
@@ -116,14 +176,14 @@ export class SessionManager {
       logger.info("Opened session editor");
       return document;
     } catch (error) {
-      throw new Error(
-        `Failed to create temporary file: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to create temporary file: ${errorMessage}`);
     }
   }
 
   /**
-   * Extract new filenames from the document
+   * Extract new filenames from the document, handling comment lines
    */
   public getNewFilenamesFromDocument(document: vscode.TextDocument): string[] {
     return document
@@ -132,6 +192,31 @@ export class SessionManager {
       .filter(
         (line) => !line.trim().startsWith("//") && line.trim().length > 0,
       );
+  }
+
+  /**
+   * Verify all session files still exist
+   * @returns True if all files exist, false otherwise
+   */
+  public async verifySessionFiles(): Promise<boolean> {
+    if (!this.currentSession) return false;
+
+    const nonExistentFiles: string[] = [];
+
+    for (const file of this.currentSession.files) {
+      if (!(await fileExists(file.fsPath))) {
+        nonExistentFiles.push(file.fsPath);
+      }
+    }
+
+    if (nonExistentFiles.length > 0) {
+      logger.warn(
+        `Some files in the session no longer exist: ${nonExistentFiles.join(", ")}`,
+      );
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -145,15 +230,24 @@ export class SessionManager {
     const tempFilePath = this.currentSession.tempFilePath;
 
     try {
-      // Close the editor
-      await vscode.commands.executeCommand(
-        "workbench.action.closeActiveEditor",
+      // Try to close any editor with our temp file
+      const editors = vscode.window.visibleTextEditors;
+      const tempEditor = editors.find(
+        (e) => e.document.uri.fsPath === tempFilePath,
       );
+
+      if (tempEditor) {
+        await vscode.commands.executeCommand(
+          "workbench.action.closeActiveEditor",
+        );
+      }
 
       // Delete the temporary file
       await deleteFileIfExists(tempFilePath);
     } catch (error) {
-      logger.error(`Error during session cleanup: ${formatErrorValue(error)}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(`Error during session cleanup: ${errorMessage}`);
       // Non-critical error, continue
     } finally {
       // Always clear the current session
