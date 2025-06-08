@@ -1,4 +1,3 @@
-// src/core/renamer.ts
 import * as path from "path";
 import * as vscode from "vscode";
 import { RenameOperation, RenameRequest, RenameResult } from "../types";
@@ -129,63 +128,6 @@ export class BatchRenamer {
     };
 
     try {
-      // Get the first and last operations with explicit checking
-      const firstOp = operations[0];
-      const lastOp = operations[operations.length - 1];
-
-      if (!firstOp || !lastOp) {
-        logger.error("Invalid operation array structure");
-        return {
-          succeeded: 0,
-          failed: operations.map((op) => ({
-            path: op?.from || "unknown",
-            error: "Invalid operation structure",
-          })),
-          skipped: 0,
-        };
-      }
-
-      const firstOpSource = firstOp.fromUri;
-      const lastOpTarget = lastOp.toUri;
-      let anchorDocument: vscode.TextDocument | undefined;
-
-      // First, check if any of the files is already open in an editor
-      const openEditors = vscode.window.visibleTextEditors;
-      const openPaths = openEditors.map((editor) =>
-        editor.document.uri.toString(),
-      );
-      const operationPaths = operations.map((op) => op.fromUri.toString());
-
-      const isAnyFileOpen = operationPaths.some((path) =>
-        openPaths.includes(path),
-      );
-
-      if (!isAnyFileOpen) {
-        // If no file is open, try to open one to anchor the undo stack
-        logger.debug(
-          "No files from operation are open in editors - creating anchor",
-        );
-
-        try {
-          // Try to open a source file first
-          if (await fileExists(firstOpSource.fsPath)) {
-            anchorDocument =
-              await vscode.workspace.openTextDocument(firstOpSource);
-            logger.debug(
-              `Created undo anchor with source file: ${firstOpSource.toString()}`,
-            );
-          }
-        } catch (error) {
-          logger.debug(
-            `Could not open source file for undo anchoring: ${formatErrorValue(error)}`,
-          );
-        }
-      } else {
-        logger.debug(
-          "File(s) from operation already open in editor - using existing anchor",
-        );
-      }
-
       // Add all rename operations to the workspace edit
       logger.info(`Adding ${operations.length} operations to workspace edit`);
       for (const op of operations) {
@@ -202,6 +144,9 @@ export class BatchRenamer {
         logger.info(
           `Successfully applied workspace edit with ${operations.length} operations`,
         );
+
+        // Mark as succeeded first - the anchoring should be considered an enhancement
+        // not a requirement for success
         result.succeeded = operations.length;
 
         // Update session file references
@@ -209,74 +154,29 @@ export class BatchRenamer {
           this.sessionManager.updateSessionAfterRename(op.from, op.to);
         }
 
-        // If we created an anchor document but didn't open it in an editor,
-        // show it briefly to ensure VSCode tracks it for undo/redo, then close it
-        if (
-          anchorDocument &&
-          !vscode.window.visibleTextEditors.some(
-            (e) => e.document === anchorDocument,
-          )
-        ) {
-          // Use type-safe context access
+        // Store rename metadata for undo tracking
+        const lastOp = operations[operations.length - 1];
+        if (lastOp) {
           await extensionContext.storeWorkspaceState(
             "batchRename.lastAnchorUri",
-            lastOpTarget.toString(),
+            lastOp.toUri.toString(),
           );
 
-          // Show document but ignore editor return value since we don't use it
-          await vscode.window.showTextDocument(anchorDocument, {
-            preview: true,
-            preserveFocus: true,
-            viewColumn: vscode.ViewColumn.Beside,
-          });
+          // Store all operation targets for better recovery options
+          await extensionContext.storeWorkspaceState(
+            "batchRename.targetUris",
+            operations.map((op) => op.toUri.toString()),
+          );
+        }
 
-          // Close the editor after a short delay (gives VSCode time to track it)
-          if (
-            anchorDocument &&
-            !vscode.window.visibleTextEditors.some(
-              (e) => e.document === anchorDocument,
-            )
-          ) {
-            // Store anchor URI using context manager
-            await extensionContext.storeWorkspaceState(
-              "batchRename.lastAnchorUri",
-              lastOp.toUri.toString(),
-            );
-
-            // Show document temporarily
-            await vscode.window.showTextDocument(anchorDocument, {
-              preview: true,
-              preserveFocus: true,
-              viewColumn: vscode.ViewColumn.Beside,
-            });
-
-            // Close editor after delay
-            setTimeout((): void => {
-              void vscode.commands.executeCommand(
-                "workbench.action.closeActiveEditor",
-              );
-              logger.debug("Closed temporary anchor editor");
-            }, 500);
-          }
-
-          // Close the editor after a short delay (gives VSCode time to track it)
-          setTimeout(() => {
-            // Use void operator to explicitly ignore the Promise
-            void (async (): Promise<void> => {
-              try {
-                await vscode.commands.executeCommand(
-                  "workbench.action.closeActiveEditor",
-                );
-                logger.debug(
-                  `Closed temporary anchor editor: ${formatErrorValue(result)}`,
-                );
-              } catch (error) {
-                logger.error(
-                  `Error closing editor: ${error instanceof Error ? error.message : String(error)}`,
-                );
-              }
-            })();
-          }, 500);
+        // Try to create editor anchors for undo/redo, but don't fail if this doesn't work
+        try {
+          await this.createUndoAnchor(operations);
+        } catch (anchorError) {
+          // Log but don't fail the operation - the files were already renamed successfully
+          logger.warn(
+            `Could not create undo anchor: ${formatErrorValue(anchorError)}`,
+          );
         }
       } else {
         logger.error("Failed to apply workspace edit");
@@ -298,5 +198,141 @@ export class BatchRenamer {
     }
 
     return result;
+  }
+
+  /**
+   * Creates an editor anchor for undo/redo support with multiple fallback strategies
+   * @param operations The rename operations that were performed
+   */
+  private async createUndoAnchor(operations: RenameOperation[]): Promise<void> {
+    if (operations.length === 0) {
+      return;
+    }
+
+    // Strategy 1: Check if any of the source files is already open in an editor
+    const openEditors = vscode.window.visibleTextEditors;
+    const openPaths = openEditors.map((editor) =>
+      editor.document.uri.toString(),
+    );
+    const operationPaths = operations.map((op) => op.fromUri.toString());
+
+    const isAnyFileOpen = operationPaths.some((path) =>
+      openPaths.includes(path),
+    );
+
+    if (isAnyFileOpen) {
+      logger.debug(
+        "File(s) from operation already open in editor - using existing anchor",
+      );
+      return; // Already have an anchor, no need to create one
+    }
+
+    // Strategy 2: Try to open the destination files with delay for filesystem events to settle
+    try {
+      // Add a short delay to allow file system events to settle
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Try each destination file in sequence until one succeeds
+      for (const op of operations) {
+        try {
+          logger.debug(`Attempting to open renamed file: ${op.toUri.fsPath}`);
+          const document = await vscode.workspace.openTextDocument(op.toUri);
+
+          await vscode.window.showTextDocument(document, {
+            preview: true,
+            preserveFocus: true,
+            viewColumn: vscode.ViewColumn.Beside,
+          });
+
+          logger.debug(
+            `Successfully created undo anchor with: ${op.toUri.fsPath}`,
+          );
+
+          // Close the editor after a short delay to avoid cluttering the UI
+          setTimeout((): void => {
+            void vscode.commands.executeCommand(
+              "workbench.action.closeActiveEditor",
+            );
+            logger.debug("Closed temporary anchor editor");
+          }, 500);
+
+          return; // Successfully created an anchor
+        } catch (error) {
+          logger.debug(
+            `Could not open ${op.toUri.fsPath}: ${formatErrorValue(error)}`,
+          );
+          // Continue to next file
+        }
+      }
+
+      // Strategy 3: Try with original files as fallback (they might still be accessible)
+      for (const op of operations) {
+        try {
+          logger.debug(
+            `Attempting to open original file: ${op.fromUri.fsPath}`,
+          );
+          const document = await vscode.workspace.openTextDocument(op.fromUri);
+
+          await vscode.window.showTextDocument(document, {
+            preview: true,
+            preserveFocus: true,
+            viewColumn: vscode.ViewColumn.Beside,
+          });
+
+          logger.debug(
+            `Created undo anchor with original file: ${op.fromUri.fsPath}`,
+          );
+
+          setTimeout((): void => {
+            void vscode.commands.executeCommand(
+              "workbench.action.closeActiveEditor",
+            );
+            logger.debug("Closed temporary anchor editor");
+          }, 500);
+
+          return; // Successfully created an anchor
+        } catch (error) {
+          logger.debug(
+            `Could not open ${op.fromUri.fsPath}: ${formatErrorValue(error)}`,
+          );
+          logger.debug(`Continuing to next file`);
+          // Continue to next file
+        }
+      }
+
+      // Strategy 4: Create a virtual document as last resort
+      logger.debug("Creating virtual document as undo anchor");
+      const timestamp = new Date().toISOString();
+      const content = [
+        "// Temporary anchor for batch rename operation",
+        `// ${timestamp}`,
+        "// This document helps VSCode track undo/redo operations",
+        "// and will close automatically.",
+        "",
+        "/* Renamed files:",
+        ...operations.map(
+          (op) => ` * ${path.basename(op.from)} → ${path.basename(op.to)}`,
+        ),
+        " */",
+      ].join("\n");
+
+      const doc = await vscode.workspace.openTextDocument({
+        content,
+        language: "javascript",
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
+
+      setTimeout((): void => {
+        void vscode.commands.executeCommand(
+          "workbench.action.closeActiveEditor",
+        );
+        logger.debug("Closed virtual document anchor editor");
+      }, 800);
+    } catch (error) {
+      // This is a progressive enhancement, so we log but don't throw
+      logger.warn(
+        `Failed to create any editor anchor: ${formatErrorValue(error)}`,
+      );
+    }
   }
 }

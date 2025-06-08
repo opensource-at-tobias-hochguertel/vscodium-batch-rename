@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { UndoRedoHandler } from "./commands";
 import { BatchRenameCommandHandler } from "./commands/batchRenameCommand";
 import { extensionContext } from "./utils/extension-context";
 import { logger } from "./utils/logger";
@@ -21,10 +22,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Register the batch rename command
     const batchRenameCommand = new BatchRenameCommandHandler(context);
-    const disposable = batchRenameCommand.register();
+    const batchRenameDisposable = batchRenameCommand.register();
 
-    // Add command to subscriptions
-    context.subscriptions.push(disposable);
+    // Register undo/redo handler
+    const undoRedoHandler = new UndoRedoHandler();
+    const undoRedoDisposables = undoRedoHandler.register();
+
+    // Add all disposables to subscriptions
+    context.subscriptions.push(batchRenameDisposable, ...undoRedoDisposables);
 
     // Use proper void return for async operations that don't use the result
     const undoListener = vscode.workspace.onDidChangeTextDocument(async (e) => {
