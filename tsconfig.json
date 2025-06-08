@@ -1,62 +1,54 @@
 {
-    "compilerOptions": {
-        // Module and Target Settings
-        "module": "commonjs",
-        "target": "ES2022",
-        "lib": [ "ES2022" ],
-        "moduleResolution": "node",
-        "esModuleInterop": true,
+  "compilerOptions": {
+    // Module and Target Settings
+    "module": "commonjs",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
 
-        // Strict Type Checking
-        "strict": true,
-        "noImplicitAny": true,
-        "strictNullChecks": true,
-        "strictFunctionTypes": true,
-        "strictBindCallApply": true,
-        "strictPropertyInitialization": true,
-        "noImplicitThis": true,
-        "useUnknownInCatchVariables": true,
-        "alwaysStrict": true,
+    // Strict Type Checking
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
 
-        // Additional Checks
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noImplicitReturns": true,
-        "noFallthroughCasesInSwitch": true,
-        "noUncheckedIndexedAccess": true,
-        "noImplicitOverride": true,
-        "noPropertyAccessFromIndexSignature": true,
+    // Additional Checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
 
-        // Module Resolution
-        "baseUrl": ".",
-        "paths": {
-            "*": [ "node_modules/*" ]
-        },
-        "resolveJsonModule": true,
-
-        // Source Maps and Output
-        "sourceMap": true,
-        "declaration": true,
-        "declarationMap": true,
-        "outDir": "out",
-        "rootDir": "src",
-
-        // Advanced
-        "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true
+    // Module Resolution
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"]
     },
-    "include": [
-        "src/**/*",
-        ".vscode-test.js"
-    ],
-    "exclude": [
-        "node_modules",
-        ".vscode-test",
-        "out"
-    ],
-    "references": [
-        { "path": "tsconfig.bun.json" }
-    ]
+    "resolveJsonModule": true,
+
+    // Source Maps and Output
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "out",
+    // "rootDir": "src",
+    "rootDir": ".",
+
+    // Advanced
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src/**/*", ".vscode-test.js"],
+  "exclude": ["node_modules", ".vscode-test", "out", "playground", "scripts"],
+  "references": [{ "path": "tsconfig.bun.json" }]
 }
