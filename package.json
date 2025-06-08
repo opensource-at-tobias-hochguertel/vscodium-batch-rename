@@ -44,6 +44,7 @@
     "esbuild-watch": "yarn esbuild-base --sourcemap --watch",
     "fix": "eslint src --ext ts --fix",
     "lint": "eslint src --ext ts",
+    "lint-staged": "lint-staged",
     "package": "vsce package",
     "prepare": "husky",
     "publish": "vsce publish",
