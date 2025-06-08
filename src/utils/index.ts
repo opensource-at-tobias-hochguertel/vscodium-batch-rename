@@ -2,3 +2,5 @@
 
 export * from "./logger";
 export * from "./filesystem";
+export * from "./extension-context";
+export * from "./formatters";

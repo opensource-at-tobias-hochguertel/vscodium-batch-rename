@@ -71,6 +71,21 @@
           "command": "extension.renameBatch"
         }
       ]
+    },
+    "configuration": {
+      "title": "Batch Rename",
+      "properties": {
+        "batchRename.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug mode with detailed logging for troubleshooting"
+        },
+        "batchRename.experimentalUndoFix": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable experimental fix for undo/redo operations (restart required)"
+        }
+      }
     }
   },
   "activationEvents": [

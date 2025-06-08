@@ -1,9 +1,28 @@
+// src/utils/formatters.ts
 /**
  * Safely converts any value to a string for use in error messages and logs.
- * Handles all JavaScript data types with proper formatting.
+ * Handles all JavaScript data types with proper formatting, including circular references.
  *
  * @param value Any value to convert to string
  * @returns Human-readable string representation
+ *
+ * @example
+ * // Basic values
+ * formatErrorValue("test") // Returns: "test"
+ * formatErrorValue(42) // Returns: "42"
+ * formatErrorValue(null) // Returns: "null"
+ *
+ * @example
+ * // Error objects
+ * formatErrorValue(new Error("Something broke")) // Returns: "Something broke (Error)"
+ *
+ * @example
+ * // Objects with circular references
+ * const obj = { name: "test" };
+ * obj.self = obj;
+ * formatErrorValue(obj) // Returns: "{"name":"test","self":"[Circular Reference]"}"
+ * // Create a Set to track objects already seen (for circular reference detection)
+ * const seen = new Set<object>();
  */
 export function formatErrorValue(value: unknown): string {
   // Handle null and undefined
