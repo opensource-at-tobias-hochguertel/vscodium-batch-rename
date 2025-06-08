@@ -67,8 +67,8 @@ async function build() {
 
   console.log(chalk.green('\n✅ Build completed successfully!'));
   console.log(chalk.blue('\nNext steps:'));
-  console.log('1. Run extension: yarn dev');
-  console.log('2. Package extension: yarn package');
+  console.log(`1. Run extension: ${chalk.magenta('yarn dev')}`);
+  console.log(`2. Package extension: ${chalk.magenta('yarn package')}`);
 }
 
 build().catch(err => {
