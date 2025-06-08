@@ -4,3 +4,4 @@ node_modules
 .vscode-test
 desktop.ini
 .yarn
+playground/
