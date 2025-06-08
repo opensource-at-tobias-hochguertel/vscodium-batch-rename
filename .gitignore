@@ -6,3 +6,5 @@ desktop.ini
 .yarn
 playground/
 docs/ai/
+temp/
+logs/
