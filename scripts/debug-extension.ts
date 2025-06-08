@@ -126,7 +126,7 @@ function launchVSCode(): void {
 
   // The command to launch VSCode - workspace file first, then flags
   const cmd = [
-    'code',
+    'windsurf',
     workspaceFilePath,           // First argument should be the workspace file
     '--new-window',              // Force new window
     '--disable-extensions',      // Disable other extensions to avoid conflicts

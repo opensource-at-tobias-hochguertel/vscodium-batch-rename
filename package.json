@@ -34,9 +34,8 @@
   "scripts": {
     "clean": "rm -rf ./out",
     "compile": "yarn run clean && tsc -p ./",
-    "dev": "yarn run compile && windsurf --extensionDevelopmentPath=/Users/tobiashochgurtel/work-dev/vscode/vscodium-batch-rename/playground",
-    "dev:alt": "node scripts/launch-dev.js",
-    "dev:pwd": "yarn run compile && windsurf --extensionDevelopmentPath=\"$PWD\"",
+    "dev": "bun scripts/debug-extension.ts",
+    "dev:verbose": "bun scripts/debug-extension.ts --verbose",
     "esbuild": "yarn esbuild-base --sourcemap",
     "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
     "esbuild-watch": "yarn esbuild-base --sourcemap --watch",
