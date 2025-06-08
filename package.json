@@ -34,7 +34,7 @@
   "scripts": {
     "clean": "rm -rf ./out",
     "compile": "yarn run clean && tsc -p ./",
-    "dev": "yarn run compile && windsurf --extensionDevelopmentPath=./playground",
+    "dev": "yarn run compile && windsurf --extensionDevelopmentPath=/Users/tobiashochgurtel/work-dev/vscode/vscodium-batch-rename/playground",
     "dev:alt": "node scripts/launch-dev.js",
     "dev:pwd": "yarn run compile && windsurf --extensionDevelopmentPath=\"$PWD\"",
     "esbuild": "yarn esbuild-base --sourcemap",

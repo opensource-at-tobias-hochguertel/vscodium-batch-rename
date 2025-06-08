@@ -6,11 +6,27 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Run Extension (Clean)",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--disable-extensions",
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--user-data-dir=/tmp/vscode-extension-dev"
+			],
+			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
+			"preLaunchTask": "yarn: watch"
+		},
+		{
 			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"args": [ "--extensionDevelopmentPath=${workspaceFolder}" ],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--disable-extensions"
+			],
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
 			"preLaunchTask": "yarn: watch"
 		},
